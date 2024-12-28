@@ -119,8 +119,11 @@ func NewTask[T, R any](parallelWorkers int) *Task[T, R] {
 
 func (t *Task[T, R]) Cancel() {
 	for _, ch := range t.chs {
-		ch <- struct{}{}
+		go func() {
+			ch <- struct{}{}
+		}()
 	}
+	t.queue.Complete()
 	close(t.resultCh)
 }
 

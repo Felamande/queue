@@ -125,8 +125,6 @@ func (q *Queue[T]) Get() (value T, priority int, err error) {
 
 // Complete 标记队列为完成
 func (q *Queue[T]) Complete() {
-	q.mu.Lock()
-	defer q.mu.Unlock()
 
 	q.complete = true
 	q.cond.Broadcast() // 唤醒所有等待的 goroutine
