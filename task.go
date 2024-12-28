@@ -3,6 +3,7 @@ package queue
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 )
 
 var LowerPriority error = errors.New("lower priority")
@@ -14,12 +15,14 @@ type WorkUnit[T any] interface {
 	Priority() int
 	QueueId() int
 	CancelWorker()
+	TaskId() int
 }
 
 type workUnit[T any] struct {
 	elem     T
 	priority int
 	qId      int
+	tid      int
 	cancel   func()
 }
 
@@ -35,6 +38,10 @@ func (w *workUnit[T]) QueueId() int {
 	return w.qId
 }
 
+func (w *workUnit[T]) TaskId() int {
+	return w.tid
+}
+
 func (w *workUnit[T]) CancelWorker() {
 	w.cancel()
 }
@@ -45,8 +52,10 @@ type work[T, R any] struct {
 }
 
 type Result[T any] struct {
-	Result T
-	Error  error
+	Result  T
+	QueueId int
+	TaskId  int
+	Error   error
 }
 
 type Task[T, R any] struct {
@@ -79,6 +88,7 @@ func NewTask[T, R any](parallelWorkers int) *Task[T, R] {
 		for i := 0; i < t.workers; i++ {
 			go func(idx int) {
 				defer t.wg.Done()
+				var taskId int64
 			loop:
 				for {
 					select {
@@ -95,7 +105,9 @@ func NewTask[T, R any](parallelWorkers int) *Task[T, R] {
 						if v.workerFn == nil {
 							continue loop
 						}
-						r, err := v.workerFn(&workUnit[T]{elem: v.elem, priority: p, qId: idx, cancel: func() { t.chs[idx] <- struct{}{} }})
+
+						atomic.AddInt64(&taskId, 1)
+						r, err := v.workerFn(&workUnit[T]{elem: v.elem, priority: p, qId: idx, tid: int(taskId), cancel: func() { t.chs[idx] <- struct{}{} }})
 
 						if err == HigherPriority {
 							if p > 1 {
@@ -105,7 +117,7 @@ func NewTask[T, R any](parallelWorkers int) *Task[T, R] {
 						} else if err == LowerPriority {
 							t.queue.Add(work[T, R]{elem: v.elem, workerFn: v.workerFn}, p+1)
 						} else {
-							t.resultCh <- Result[R]{r, err}
+							t.resultCh <- Result[R]{Result: r, QueueId: idx, TaskId: int(taskId), Error: err}
 						}
 					}
 
@@ -143,4 +155,8 @@ func (t *Task[T, R]) WaitFor(f func(result Result[R]) bool) {
 
 func (t *Task[T, R]) Queue(elem T, priority int, fn func(w WorkUnit[T]) (result R, err error)) {
 	t.queue.Add(work[T, R]{elem, fn}, priority)
+}
+
+func (t *Task[T, R]) Len() int {
+	return t.queue.Len()
 }
