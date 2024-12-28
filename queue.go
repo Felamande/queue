@@ -123,6 +123,12 @@ func (q *Queue[T]) Get() (value T, priority int, err error) {
 	return v, p, nil
 }
 
+func (q *Queue[T]) Len() int {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return q.pq.Len()
+}
+
 // Complete 标记队列为完成
 func (q *Queue[T]) Complete() {
 
