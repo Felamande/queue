@@ -8,6 +8,7 @@ import (
 
 var LowerPriority error = errors.New("lower priority")
 var HigherPriority error = errors.New("upper priority")
+var EqualPriority error = errors.New("equal priority")
 var Discard error = errors.New("discard")
 
 type WorkUnit[T any] interface {
@@ -116,6 +117,8 @@ func NewTask[T, R any](parallelWorkers int) *Task[T, R] {
 							t.queue.Add(work[T, R]{elem: v.elem, workerFn: v.workerFn}, p)
 						} else if err == LowerPriority {
 							t.queue.Add(work[T, R]{elem: v.elem, workerFn: v.workerFn}, p+1)
+						} else if err == EqualPriority {
+							t.queue.Add(work[T, R]{elem: v.elem, workerFn: v.workerFn}, p)
 						} else {
 							t.resultCh <- Result[R]{Result: r, QueueId: idx, TaskId: int(taskId), Error: err}
 						}
