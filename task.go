@@ -111,10 +111,7 @@ func NewTask[T, R any](parallelWorkers int) *Task[T, R] {
 						r, err := v.workerFn(&workUnit[T]{elem: v.elem, priority: p, qId: idx, tid: int(taskId), cancel: func() { t.chs[idx] <- struct{}{} }})
 
 						if err == HigherPriority {
-							if p > 1 {
-								p = p - 1
-							}
-							t.queue.Add(work[T, R]{elem: v.elem, workerFn: v.workerFn}, p)
+							t.queue.Add(work[T, R]{elem: v.elem, workerFn: v.workerFn}, p-1)
 						} else if err == LowerPriority {
 							t.queue.Add(work[T, R]{elem: v.elem, workerFn: v.workerFn}, p+1)
 						} else if err == EqualPriority {
