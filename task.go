@@ -9,7 +9,8 @@ import (
 var LowerPriority error = errors.New("lower priority")
 var HigherPriority error = errors.New("upper priority")
 var EqualPriority error = errors.New("equal priority")
-var Discard error = errors.New("discard")
+
+// var Discard error = errors.New("discard")
 
 type WorkUnit[T any] interface {
 	Value() T
@@ -53,10 +54,8 @@ type work[T, R any] struct {
 }
 
 type Result[T any] struct {
-	Result  T
-	QueueId int
-	TaskId  int
-	Error   error
+	Result T
+	Error  error
 }
 
 type Task[T, R any] struct {
@@ -117,7 +116,7 @@ func NewTask[T, R any](parallelWorkers int) *Task[T, R] {
 						} else if err == EqualPriority {
 							t.queue.Add(work[T, R]{elem: v.elem, workerFn: v.workerFn}, p)
 						} else {
-							t.resultCh <- Result[R]{Result: r, QueueId: idx, TaskId: int(taskId), Error: err}
+							t.resultCh <- Result[R]{Result: r, Error: err}
 						}
 					}
 
@@ -128,6 +127,11 @@ func NewTask[T, R any](parallelWorkers int) *Task[T, R] {
 	return t
 
 }
+
+func (t *Task[T, R]) startWorker() {
+}
+
+func (t *Task[T, R]) restartWorkerOnPanic(i int) {}
 
 func (t *Task[T, R]) Cancel() {
 	for _, ch := range t.chs {
