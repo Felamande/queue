@@ -97,6 +97,7 @@ func NewTask[T, R any](parallelWorkers int) *Task[T, R] {
 					default:
 						v, p, err := t.queue.Get()
 						if errors.Is(err, ErrorComplete) {
+
 							return
 						}
 						if err != nil {
