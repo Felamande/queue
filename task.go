@@ -147,6 +147,10 @@ func (t *Task[T, R]) Results() chan Result[R] {
 	return t.resultCh
 }
 
+func (t *Task[T, R]) Complete() {
+	t.queue.Complete()
+}
+
 func (t *Task[T, R]) Wait() {
 	for range t.resultCh {
 	}
